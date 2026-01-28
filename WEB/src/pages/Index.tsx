@@ -1,11 +1,12 @@
-import { UserProvider, useUser } from '@/context/UserContext';
+import { useUser } from '@/context/UserContext';
+import { UserProvider } from '@/context/UserProvider';
 import { AppProvider } from '@/context/AppContext';
 import AuthWizard from '@/components/auth/AuthWizard';
 import Dashboard from '@/components/dashboard/Dashboard';
 
 function AppContent() {
   const { isAuthenticated } = useUser();
-  
+
   return isAuthenticated ? <Dashboard /> : <AuthWizard />;
 }
 

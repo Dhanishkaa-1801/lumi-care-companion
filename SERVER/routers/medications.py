@@ -22,6 +22,30 @@ def create_medication(med: schemas.MedicationCreate, db: Session = Depends(get_d
     db.refresh(db_med)
     return db_med
 
+@router.put("/{med_id}", response_model=schemas.Medication)
+def update_medication(med_id: int, med: schemas.MedicationUpdate, db: Session = Depends(get_db), current_user: models.User = Depends(dependencies.get_current_user)):
+    db_med = db.query(models.Medication).filter(models.Medication.id == med_id, models.Medication.user_id == current_user.id).first()
+    if not db_med:
+        raise HTTPException(status_code=404, detail="Medication not found")
+    
+    update_data = med.dict(exclude_unset=True)
+    for key, value in update_data.items():
+        setattr(db_med, key, value)
+    
+    db.commit()
+    db.refresh(db_med)
+    return db_med
+
+@router.delete("/{med_id}")
+def delete_medication(med_id: int, db: Session = Depends(get_db), current_user: models.User = Depends(dependencies.get_current_user)):
+    db_med = db.query(models.Medication).filter(models.Medication.id == med_id, models.Medication.user_id == current_user.id).first()
+    if not db_med:
+        raise HTTPException(status_code=404, detail="Medication not found")
+    
+    db.delete(db_med)
+    db.commit()
+    return {"message": "Medication deleted successfully"}
+
 @router.post("/{med_id}/log", response_model=schemas.MedicationLog)
 def log_medication(med_id: int, log: schemas.MedicationLogCreate, db: Session = Depends(get_db), current_user: models.User = Depends(dependencies.get_current_user)):
     # Verify medication belongs to user

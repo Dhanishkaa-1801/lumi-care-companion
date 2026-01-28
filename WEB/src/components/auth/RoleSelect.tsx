@@ -11,19 +11,22 @@ export default function RoleSelect({ onNext }: RoleSelectProps) {
 
   const handleSelect = (role: 'patient' | 'caretaker') => {
     updateProfile({ role });
+    setTimeout(() => {
+      onNext();
+    }, 100);
   };
 
   return (
     <div className="flex flex-col h-full">
       <div className="text-center mb-8">
-        <h2 className="text-2xl font-bold text-foreground mb-2">Welcome to LUMI</h2>
+        <h2 className="text-2xl font-bold text-primary">Welcome to LUMI</h2>
         <p className="text-muted-foreground">Select your role to get started</p>
       </div>
 
-      <div className="flex-1 flex flex-col gap-4 max-w-md mx-auto w-full">
+      <div className="flex-1 flex flex-col gap-4 max-w-md mx-auto w-full justify-center">
         <button
           onClick={() => handleSelect('patient')}
-          className={`selection-card py-8 ${profile.role === 'patient' ? 'selection-card-active' : ''}`}
+          className="selection-card py-8 hover:bg-muted/50 transition-all hover:scale-[1.02]"
         >
           <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center">
             <User className="w-8 h-8 text-primary" />
@@ -38,7 +41,7 @@ export default function RoleSelect({ onNext }: RoleSelectProps) {
 
         <button
           onClick={() => handleSelect('caretaker')}
-          className={`selection-card py-8 ${profile.role === 'caretaker' ? 'selection-card-active' : ''}`}
+          className="selection-card py-8 hover:bg-muted/50 transition-all hover:scale-[1.02]"
         >
           <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center">
             <Heart className="w-8 h-8 text-primary" />
@@ -51,16 +54,7 @@ export default function RoleSelect({ onNext }: RoleSelectProps) {
           </div>
         </button>
       </div>
-
-      <div className="mt-auto pt-6">
-        <button
-          onClick={onNext}
-          disabled={!profile.role}
-          className="btn-primary w-full disabled:opacity-50 disabled:cursor-not-allowed"
-        >
-          Continue
-        </button>
-      </div>
     </div>
   );
+
 }

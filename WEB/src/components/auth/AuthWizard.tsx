@@ -34,27 +34,7 @@ export default function AuthWizard() {
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
-      {/* Header */}
-      <header className="px-6 py-4 flex items-center justify-center border-b border-border/50">
-        <h1 className="text-2xl font-bold text-primary">LUMI</h1>
-      </header>
 
-      {/* Progress Bar */}
-      <div className="px-6 pt-4">
-        <div className="h-2 bg-muted rounded-full overflow-hidden">
-          <motion.div
-            className="h-full bg-primary rounded-full"
-            initial={{ width: 0 }}
-            animate={{ width: `${progress}%` }}
-            transition={{ duration: 0.3 }}
-          />
-        </div>
-        <p className="text-sm text-muted-foreground mt-2 text-center">
-          Step {stepIndex + 1} of {steps.length}
-        </p>
-      </div>
-
-      {/* Content */}
       <div className="flex-1 px-6 py-8 overflow-y-auto hide-scrollbar">
         <AnimatePresence mode="wait">
           <motion.div

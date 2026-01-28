@@ -39,4 +39,14 @@ async def get_current_user(token: str = Depends(oauth2_scheme), db: Session = De
     user = db.query(models.User).filter(models.User.phone == token_data.phone).first()
     if user is None:
         raise credentials_exception
+    
+    # Check Session ID for Single Device Login
+    token_sid = payload.get("sid")
+    if token_sid and user.session_id and token_sid != user.session_id:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Session expired: Logged in on another device",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+        
     return user

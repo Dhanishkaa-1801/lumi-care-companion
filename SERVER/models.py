@@ -12,13 +12,20 @@ class User(Base):
     dob = Column(Date)
     blood_group = Column(String)
     address = Column(String)
+    health_issues = Column(String, nullable=True)
+    role = Column(String, default="patient")
+    role = Column(String, default="patient")
     created_at = Column(DateTime, default=datetime.datetime.utcnow)
+    created_at = Column(DateTime, default=datetime.datetime.utcnow)
+    last_active_at = Column(DateTime, default=datetime.datetime.utcnow)
+    session_id = Column(String, nullable=True)
     
     # Relationships
     nominees = sqlalchemy_relationship("Nominee", back_populates="user")
     medications = sqlalchemy_relationship("Medication", back_populates="user")
     medication_logs = sqlalchemy_relationship("MedicationLog", back_populates="user")
     emergency_alerts = sqlalchemy_relationship("EmergencyAlert", back_populates="user")
+    health_metrics = sqlalchemy_relationship("HealthMetric", back_populates="user")
 
 class Nominee(Base):
     __tablename__ = "nominees"
@@ -69,3 +76,15 @@ class EmergencyAlert(Base):
     resolved_at = Column(DateTime, nullable=True)
     
     user = sqlalchemy_relationship("User", back_populates="emergency_alerts")
+
+class HealthMetric(Base):
+    __tablename__ = "health_metrics"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"))
+    metric_type = Column(String) # 'heart_rate', 'blood_pressure', 'steps'
+    value = Column(String) # Storing as string to handle '120/80' BP format easily
+    unit = Column(String)
+    timestamp = Column(DateTime, default=datetime.datetime.utcnow)
+    
+    user = sqlalchemy_relationship("User", back_populates="health_metrics")

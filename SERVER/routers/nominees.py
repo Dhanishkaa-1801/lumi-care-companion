@@ -21,6 +21,23 @@ def create_nominee(nominee: schemas.NomineeCreate, db: Session = Depends(get_db)
     db.refresh(db_nominee)
     return db_nominee
 
+@router.put("/{nominee_id}", response_model=schemas.Nominee)
+def update_nominee(nominee_id: int, nominee_update: schemas.NomineeUpdate, db: Session = Depends(get_db), current_user: models.User = Depends(dependencies.get_current_user)):
+    db_nominee = db.query(models.Nominee).filter(models.Nominee.id == nominee_id, models.Nominee.user_id == current_user.id).first()
+    if not db_nominee:
+        raise HTTPException(status_code=404, detail="Nominee not found")
+    
+    if nominee_update.name is not None:
+        db_nominee.name = nominee_update.name
+    if nominee_update.relationship is not None:
+        db_nominee.relationship = nominee_update.relationship
+    if nominee_update.phone is not None:
+        db_nominee.phone = nominee_update.phone
+        
+    db.commit()
+    db.refresh(db_nominee)
+    return db_nominee
+
 @router.delete("/{nominee_id}")
 def delete_nominee(nominee_id: int, db: Session = Depends(get_db), current_user: models.User = Depends(dependencies.get_current_user)):
     db_nominee = db.query(models.Nominee).filter(models.Nominee.id == nominee_id, models.Nominee.user_id == current_user.id).first()

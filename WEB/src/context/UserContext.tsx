@@ -1,15 +1,19 @@
-import React, { createContext, useContext, useState, ReactNode } from 'react';
+import { createContext, useContext } from 'react';
 
 export interface Medication {
-  id: string;
+  id: number;
   name: string;
-  time: string;
-  taken: boolean;
+  dosage: string;
+  scheduled_time: string;
+  start_date: string;
+  end_date?: string;
+  taken?: boolean;
 }
 
 export interface UserProfile {
   role: 'patient' | 'caretaker' | null;
   name: string;
+  fullname: string;
   age: string;
   phone: string;
   address: string;
@@ -17,110 +21,39 @@ export interface UserProfile {
   healthIssues: string;
   nomineeName: string;
   nomineePhone: string;
+  otp?: string;
+}
+
+export interface Nominee {
+  id: number;
+  name: string;
+  relationship: string;
+  phone: string;
 }
 
 export interface UserContextType {
   isAuthenticated: boolean;
   profile: UserProfile;
   medications: Medication[];
+  nominees: Nominee[];
   dailyProgress: number;
   setAuthenticated: (value: boolean) => void;
   updateProfile: (updates: Partial<UserProfile>) => void;
   addMedication: (medication: Omit<Medication, 'id' | 'taken'>) => void;
-  updateMedication: (id: string, updates: Partial<Omit<Medication, 'id'>>) => void;
-  removeMedication: (id: string) => void;
-  toggleMedicationTaken: (id: string) => void;
+  updateMedication: (id: number, updates: Partial<Omit<Medication, 'id'>>) => void;
+  removeMedication: (id: number) => void;
+  toggleMedicationTaken: (id: number) => void;
+  addNominee: (nominee: { name: string; phone: string; relationship: string }) => void;
+  updateNominee: (id: number, updates: { name?: string; phone?: string; relationship?: string }) => void;
+  removeNominee: (id: number) => void;
+  saveVitals: (metrics: { metric_type: string; value: string; unit: string; timestamp: string }[]) => Promise<void>;
   logout: () => void;
+  login: (phone: string, otp: string) => Promise<boolean>;
+  register: (profile: UserProfile) => Promise<boolean>;
+  checkUser: (phone: string) => Promise<boolean>;
 }
 
-const defaultProfile: UserProfile = {
-  role: null,
-  name: '',
-  age: '',
-  phone: '',
-  address: '',
-  bloodGroup: '',
-  healthIssues: '',
-  nomineeName: '',
-  nomineePhone: '',
-};
-
-const defaultMedications: Medication[] = [
-  { id: '1', name: 'Metformin', time: '08:00 AM', taken: true },
-  { id: '2', name: 'Lisinopril', time: '12:00 PM', taken: false },
-  { id: '3', name: 'Aspirin', time: '06:00 PM', taken: false },
-];
-
-const UserContext = createContext<UserContextType | undefined>(undefined);
-
-export function UserProvider({ children }: { children: ReactNode }) {
-  const [isAuthenticated, setAuthenticated] = useState(false);
-  const [profile, setProfile] = useState<UserProfile>(defaultProfile);
-  const [medications, setMedications] = useState<Medication[]>(defaultMedications);
-
-  const updateProfile = (updates: Partial<UserProfile>) => {
-    setProfile((prev) => ({ ...prev, ...updates }));
-  };
-
-  const addMedication = (medication: Omit<Medication, 'id' | 'taken'>) => {
-    const newMed: Medication = {
-      ...medication,
-      id: Date.now().toString(),
-      taken: false,
-    };
-    setMedications((prev) => [...prev, newMed]);
-  };
-
-  const updateMedication = (id: string, updates: Partial<Omit<Medication, 'id'>>) => {
-    setMedications((prev) =>
-      prev.map((med) =>
-        med.id === id ? { ...med, ...updates } : med
-      )
-    );
-  };
-
-  const removeMedication = (id: string) => {
-    setMedications((prev) => prev.filter((med) => med.id !== id));
-  };
-
-  const toggleMedicationTaken = (id: string) => {
-    setMedications((prev) =>
-      prev.map((med) =>
-        med.id === id ? { ...med, taken: !med.taken } : med
-      )
-    );
-  };
-
-  const logout = () => {
-    setAuthenticated(false);
-    setProfile(defaultProfile);
-    setMedications(defaultMedications);
-  };
-
-  const dailyProgress = medications.length > 0
-    ? Math.round((medications.filter((m) => m.taken).length / medications.length) * 100)
-    : 0;
-
-  return (
-    <UserContext.Provider
-      value={{
-        isAuthenticated,
-        profile,
-        medications,
-        dailyProgress,
-        setAuthenticated,
-        updateProfile,
-        addMedication,
-        updateMedication,
-        removeMedication,
-        toggleMedicationTaken,
-        logout,
-      }}
-    >
-      {children}
-    </UserContext.Provider>
-  );
-}
+export const UserContext = createContext<UserContextType | undefined>(undefined);
 
 export function useUser() {
   const context = useContext(UserContext);

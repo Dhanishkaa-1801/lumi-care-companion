@@ -9,34 +9,56 @@ import EmergencyAlert from './EmergencyAlert';
 import ProfileModal from './ProfileModal';
 import MedicationModal from './MedicationModal';
 import EmergencySettingsModal from './EmergencySettingsModal';
+import VitalsModal from './VitalsModal';
+import VitalsBackgroundSync from './VitalsBackgroundSync';
 
 export default function Dashboard() {
   const { isEmergencyMode } = useApp();
+  const { profile } = useUser();
+  const isCaretaker = profile.role === 'caretaker';
   const [showProfileModal, setShowProfileModal] = React.useState(false);
   const [showMedicationModal, setShowMedicationModal] = React.useState(false);
   const [showEmergencySettings, setShowEmergencySettings] = React.useState(false);
+  const [showVitalsModal, setShowVitalsModal] = React.useState(false);
+
+  React.useEffect(() => {
+    const handleOpenVitals = () => setShowVitalsModal(true);
+    window.addEventListener('openVitalsModal', handleOpenVitals);
+    return () => window.removeEventListener('openVitalsModal', handleOpenVitals);
+  }, []);
 
   return (
     <div className={`min-h-screen bg-background flex flex-col relative overflow-hidden ${isEmergencyMode ? 'emergency-mode' : ''}`}>
       <Header onProfileClick={() => setShowProfileModal(true)} />
-      
+      <VitalsBackgroundSync />
+
       <main className="flex-1 flex flex-col items-center justify-center px-6 py-8">
         <MicInterface />
       </main>
 
-      <LeftSidebar />
-      <RightSidebar 
-        onMedicationSettings={() => setShowMedicationModal(true)}
-        onEmergencySettings={() => setShowEmergencySettings(true)}
-      />
+      {/* Patient Only: Sidebars and Alerts */}
+      {!isCaretaker && (
+        <>
+          <LeftSidebar />
+          <RightSidebar
+            onMedicationSettings={() => setShowMedicationModal(true)}
+            onEmergencySettings={() => setShowEmergencySettings(true)}
+          />
+          {/* Modals */}
+          <ProfileModal open={showProfileModal} onClose={() => setShowProfileModal(false)} />
+          <MedicationModal open={showMedicationModal} onClose={() => setShowMedicationModal(false)} />
+          <EmergencySettingsModal open={showEmergencySettings} onClose={() => setShowEmergencySettings(false)} />
+          <VitalsModal open={showVitalsModal} onClose={() => setShowVitalsModal(false)} />
 
-      {/* Modals */}
-      <ProfileModal open={showProfileModal} onClose={() => setShowProfileModal(false)} />
-      <MedicationModal open={showMedicationModal} onClose={() => setShowMedicationModal(false)} />
-      <EmergencySettingsModal open={showEmergencySettings} onClose={() => setShowEmergencySettings(false)} />
-      
-      {/* Emergency Alert */}
-      <EmergencyAlert />
+          {/* Emergency Alert */}
+          <EmergencyAlert />
+        </>
+      )}
+
+      {/* Caretaker Only: Profile Modal is still needed if clicked from Header */}
+      {isCaretaker && (
+        <ProfileModal open={showProfileModal} onClose={() => setShowProfileModal(false)} />
+      )}
     </div>
   );
 }

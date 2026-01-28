@@ -8,8 +8,9 @@ interface HealthNomineeFormProps {
 }
 
 export default function HealthNomineeForm({ onNext, onBack }: HealthNomineeFormProps) {
-  const { profile, updateProfile } = useUser();
+  const { profile, updateProfile, register } = useUser();
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [loading, setLoading] = useState(false);
 
   const validate = () => {
     const newErrors: Record<string, string> = {};
@@ -21,9 +22,17 @@ export default function HealthNomineeForm({ onNext, onBack }: HealthNomineeFormP
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleComplete = () => {
+  const handleComplete = async () => {
     if (validate()) {
-      onNext();
+      setLoading(true);
+      const success = await register(profile);
+      if (success) {
+        onNext();
+      } else {
+        // Handle error (maybe show toast or error message)
+        console.error("Registration failed");
+      }
+      setLoading(false);
     }
   };
 
@@ -104,8 +113,8 @@ export default function HealthNomineeForm({ onNext, onBack }: HealthNomineeFormP
       </div>
 
       <div className="mt-auto pt-6">
-        <button onClick={handleComplete} className="btn-primary w-full">
-          Complete Setup
+        <button onClick={handleComplete} disabled={loading} className="btn-primary w-full disabled:opacity-70">
+          {loading ? 'Creating Account...' : 'Complete Setup'}
         </button>
       </div>
     </div>

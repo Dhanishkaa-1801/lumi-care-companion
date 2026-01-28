@@ -1,7 +1,9 @@
 import React, { useEffect, useState } from 'react';
 import { useApp } from '@/context/AppContext';
+import { useUser } from '@/context/UserContext';
 import { Mic, MicOff } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import CaretakerDashboard from './CaretakerDashboard';
 
 const mockTranscripts = [
   "I took my medicine",
@@ -12,7 +14,12 @@ const mockTranscripts = [
 
 export default function MicInterface() {
   const { isListening, setIsListening, transcript, setTranscript, triggerEmergency, isEmergencyMode } = useApp();
+  const { profile } = useUser();
   const [showTranscript, setShowTranscript] = useState(false);
+
+  if (profile.role === 'caretaker') {
+    return <CaretakerDashboard />;
+  }
 
   const handleMicClick = () => {
     if (isListening) {
@@ -22,18 +29,18 @@ export default function MicInterface() {
       setIsListening(true);
       setTranscript('');
       setShowTranscript(false);
-      
+
       // Simulate speech recognition
       setTimeout(() => {
         const randomTranscript = mockTranscripts[Math.floor(Math.random() * mockTranscripts.length)];
         setTranscript(randomTranscript);
-        
+
         // Check for emergency keyword
         if (randomTranscript.toLowerCase().includes('help')) {
           triggerEmergency();
         }
       }, 2000);
-      
+
       // Auto stop after 3 seconds
       setTimeout(() => {
         setIsListening(false);
@@ -45,7 +52,7 @@ export default function MicInterface() {
   return (
     <div className="flex flex-col items-center gap-8 w-full max-w-md">
       {/* Status Text */}
-      <motion.p 
+      <motion.p
         className={`text-lg font-medium ${isEmergencyMode ? 'text-white' : 'text-muted-foreground'}`}
         key={isListening ? 'listening' : 'idle'}
         initial={{ opacity: 0, y: -10 }}

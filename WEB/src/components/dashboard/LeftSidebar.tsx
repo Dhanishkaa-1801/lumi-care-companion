@@ -1,12 +1,12 @@
 import React from 'react';
 import { useApp } from '@/context/AppContext';
 import { useUser } from '@/context/UserContext';
-import { X, Pill, TrendingUp, Shield, Camera, ChevronDown, ChevronUp, Check } from 'lucide-react';
+import { X, Pill, TrendingUp, Shield, Camera, ChevronDown, ChevronUp, Check, Activity } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 export default function LeftSidebar() {
   const { leftSidebarOpen, setLeftSidebarOpen, isEmergencyMode } = useApp();
-  const { medications, dailyProgress, toggleMedicationTaken } = useUser();
+  const { medications, dailyProgress, toggleMedicationTaken, profile } = useUser();
   const [expandedSection, setExpandedSection] = React.useState<string | null>('medications');
 
   const toggleSection = (section: string) => {
@@ -51,6 +51,52 @@ export default function LeftSidebar() {
 
             {/* Content */}
             <div className="flex-1 overflow-y-auto hide-scrollbar p-4 space-y-4">
+
+              {/* Health Vitals */}
+              {profile.role !== 'caretaker' && ( // Assuming Vitals are primarily for patients or visible to all? Code didn't have check before. Keeping as adds value.
+                <div className="care-card-sm">
+                  <button
+                    onClick={() => toggleSection('vitals')}
+                    className="w-full flex items-center justify-between"
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-xl bg-orange-500/10 flex items-center justify-center">
+                        <Activity className="w-5 h-5 text-orange-500" />
+                      </div>
+                      <span className="font-semibold text-foreground">Health Vitals</span>
+                    </div>
+                    {expandedSection === 'vitals' ? (
+                      <ChevronUp className="w-5 h-5 text-muted-foreground" />
+                    ) : (
+                      <ChevronDown className="w-5 h-5 text-muted-foreground" />
+                    )}
+                  </button>
+
+                  <AnimatePresence>
+                    {expandedSection === 'vitals' && (
+                      <motion.div
+                        initial={{ height: 0, opacity: 0 }}
+                        animate={{ height: 'auto', opacity: 1 }}
+                        exit={{ height: 0, opacity: 0 }}
+                        className="overflow-hidden"
+                      >
+                        <div className="pt-4">
+                          <button
+                            onClick={() => {
+                              window.dispatchEvent(new CustomEvent('openVitalsModal'));
+                            }}
+                            className="btn-primary w-full flex items-center justify-center gap-2"
+                          >
+                            <Activity className="w-4 h-4" />
+                            View Live Vitals
+                          </button>
+                        </div>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </div>
+              )}
+
               {/* Medications Accordion */}
               <div className="care-card-sm">
                 <button
@@ -87,23 +133,21 @@ export default function LeftSidebar() {
                           medications.map((med) => (
                             <div
                               key={med.id}
-                              className={`flex items-center justify-between p-3 rounded-xl border ${
-                                med.taken ? 'bg-success/10 border-success/30' : 'bg-muted/50 border-border'
-                              }`}
+                              className={`flex items-center justify-between p-3 rounded-xl border ${med.taken ? 'bg-success/10 border-success/30' : 'bg-muted/50 border-border'
+                                }`}
                             >
                               <div>
                                 <p className={`font-medium ${med.taken ? 'text-success' : 'text-foreground'}`}>
                                   {med.name}
                                 </p>
-                                <p className="text-sm text-muted-foreground">{med.time}</p>
+                                <p className="text-sm text-muted-foreground">{med.scheduled_time}</p>
                               </div>
                               <button
                                 onClick={() => toggleMedicationTaken(med.id)}
-                                className={`w-8 h-8 rounded-lg flex items-center justify-center transition-colors ${
-                                  med.taken
-                                    ? 'bg-success text-white'
-                                    : 'bg-muted hover:bg-primary/10 text-muted-foreground hover:text-primary'
-                                }`}
+                                className={`w-8 h-8 rounded-lg flex items-center justify-center transition-colors ${med.taken
+                                  ? 'bg-success text-white'
+                                  : 'bg-muted hover:bg-primary/10 text-muted-foreground hover:text-primary'
+                                  }`}
                               >
                                 <Check className="w-4 h-4" />
                               </button>
@@ -202,43 +246,45 @@ export default function LeftSidebar() {
                 </AnimatePresence>
               </div>
 
-              {/* Camera Access */}
-              <div className="care-card-sm">
-                <button
-                  onClick={() => toggleSection('camera')}
-                  className="w-full flex items-center justify-between"
-                >
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
-                      <Camera className="w-5 h-5 text-primary" />
-                    </div>
-                    <span className="font-semibold text-foreground">Camera Access</span>
-                  </div>
-                  {expandedSection === 'camera' ? (
-                    <ChevronUp className="w-5 h-5 text-muted-foreground" />
-                  ) : (
-                    <ChevronDown className="w-5 h-5 text-muted-foreground" />
-                  )}
-                </button>
-
-                <AnimatePresence>
-                  {expandedSection === 'camera' && (
-                    <motion.div
-                      initial={{ height: 0, opacity: 0 }}
-                      animate={{ height: 'auto', opacity: 1 }}
-                      exit={{ height: 0, opacity: 0 }}
-                      className="overflow-hidden"
-                    >
-                      <div className="pt-4">
-                        <button className="btn-secondary w-full flex items-center justify-center gap-2">
-                          <Camera className="w-4 h-4" />
-                          Connect Camera
-                        </button>
+              {/* Camera Access - Only for caretakers */}
+              {profile.role === 'caretaker' && (
+                <div className="care-card-sm">
+                  <button
+                    onClick={() => toggleSection('camera')}
+                    className="w-full flex items-center justify-between"
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
+                        <Camera className="w-5 h-5 text-primary" />
                       </div>
-                    </motion.div>
-                  )}
-                </AnimatePresence>
-              </div>
+                      <span className="font-semibold text-foreground">Camera Access</span>
+                    </div>
+                    {expandedSection === 'camera' ? (
+                      <ChevronUp className="w-5 h-5 text-muted-foreground" />
+                    ) : (
+                      <ChevronDown className="w-5 h-5 text-muted-foreground" />
+                    )}
+                  </button>
+
+                  <AnimatePresence>
+                    {expandedSection === 'camera' && (
+                      <motion.div
+                        initial={{ height: 0, opacity: 0 }}
+                        animate={{ height: 'auto', opacity: 1 }}
+                        exit={{ height: 0, opacity: 0 }}
+                        className="overflow-hidden"
+                      >
+                        <div className="pt-4">
+                          <button className="btn-secondary w-full flex items-center justify-center gap-2">
+                            <Camera className="w-4 h-4" />
+                            Connect Camera
+                          </button>
+                        </div>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </div>
+              )}
             </div>
           </motion.aside>
         )}

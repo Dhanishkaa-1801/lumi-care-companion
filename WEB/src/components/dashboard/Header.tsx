@@ -14,13 +14,15 @@ export default function Header({ onProfileClick }: HeaderProps) {
 
   return (
     <header className={`px-4 py-3 flex items-center justify-between border-b ${isEmergencyMode ? 'bg-destructive border-destructive' : 'bg-card border-border/50'} sticky top-0 z-40`}>
-      {/* Left - Hamburger */}
-      <button 
-        onClick={() => setLeftSidebarOpen(true)}
-        className={`p-2 rounded-xl transition-colors ${isEmergencyMode ? 'hover:bg-white/20 text-white' : 'hover:bg-accent text-foreground'}`}
-      >
-        <Menu className="w-6 h-6" />
-      </button>
+      {/* Left - Hamburger (Patient Only) */}
+      {profile.role !== 'caretaker' && (
+        <button
+          onClick={() => setLeftSidebarOpen(true)}
+          className={`p-2 rounded-xl transition-colors ${isEmergencyMode ? 'hover:bg-white/20 text-white' : 'hover:bg-accent text-foreground'}`}
+        >
+          <Menu className="w-6 h-6" />
+        </button>
+      )}
 
       {/* Center - Logo */}
       <h1 className={`text-2xl font-bold ${isEmergencyMode ? 'text-white' : 'text-primary'}`}>
@@ -29,16 +31,19 @@ export default function Header({ onProfileClick }: HeaderProps) {
 
       {/* Right - Settings & Avatar */}
       <div className="flex items-center gap-2">
-        <button 
-          onClick={() => setRightSidebarOpen(true)}
-          className={`p-2 rounded-xl transition-colors ${isEmergencyMode ? 'hover:bg-white/20 text-white' : 'hover:bg-accent text-foreground'}`}
-        >
-          <Settings className="w-6 h-6" />
-        </button>
+        {/* Settings (Patient Only) */}
+        {profile.role !== 'caretaker' && (
+          <button
+            onClick={() => setRightSidebarOpen(true)}
+            className={`p-2 rounded-xl transition-colors ${isEmergencyMode ? 'hover:bg-white/20 text-white' : 'hover:bg-accent text-foreground'}`}
+          >
+            <Settings className="w-6 h-6" />
+          </button>
+        )}
 
         {/* Avatar with Dropdown */}
         <div className="relative">
-          <button 
+          <button
             onClick={() => setShowDropdown(!showDropdown)}
             className={`w-10 h-10 rounded-full flex items-center justify-center font-semibold ${isEmergencyMode ? 'bg-white/20 text-white' : 'bg-primary text-primary-foreground'}`}
           >
@@ -64,12 +69,7 @@ export default function Header({ onProfileClick }: HeaderProps) {
                     <User className="w-5 h-5 text-muted-foreground" />
                     <span>View Profile</span>
                   </button>
-                  {profile.role === 'caretaker' && (
-                    <button className="w-full flex items-center gap-3 px-4 py-3 hover:bg-accent transition-colors text-left">
-                      <Users className="w-5 h-5 text-muted-foreground" />
-                      <span>Switch Patient</span>
-                    </button>
-                  )}
+
                   <button
                     onClick={() => {
                       setShowDropdown(false);

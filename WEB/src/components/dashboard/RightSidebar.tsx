@@ -142,32 +142,6 @@ export default function RightSidebar({ onMedicationSettings, onEmergencySettings
                 </div>
               </div>
 
-              {/* Alerts Toggle */}
-              <div className="care-card-sm">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
-                      <Bell className="w-5 h-5 text-primary" />
-                    </div>
-                    <div>
-                      <p className="font-semibold text-foreground">Voice Feedback</p>
-                      <p className="text-sm text-muted-foreground">Audio responses enabled</p>
-                    </div>
-                  </div>
-                  <button
-                    onClick={() => setVoiceFeedback(!voiceFeedback)}
-                    className={`w-12 h-7 rounded-full p-1 transition-colors ${
-                      voiceFeedback ? 'bg-primary' : 'bg-muted'
-                    }`}
-                  >
-                    <motion.div
-                      className="w-5 h-5 rounded-full bg-white shadow"
-                      animate={{ x: voiceFeedback ? 20 : 0 }}
-                      transition={{ type: 'spring', stiffness: 500, damping: 30 }}
-                    />
-                  </button>
-                </div>
-              </div>
             </div>
           </motion.aside>
         )}

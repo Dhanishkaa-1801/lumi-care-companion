@@ -51,6 +51,15 @@ export interface UserContextType {
   login: (phone: string, otp: string) => Promise<boolean>;
   register: (profile: UserProfile) => Promise<boolean>;
   checkUser: (phone: string) => Promise<boolean>;
+  // Caretaker methods
+  fetchPatientMedications: (patientId: number) => Promise<Medication[]>;
+  addPatientMedication: (patientId: number, med: any) => Promise<void>;
+  updatePatientMedication: (patientId: number, medId: number, updates: any) => Promise<void>;
+  removePatientMedication: (patientId: number, medId: number) => Promise<void>;
+  fetchPatientNominees: (patientId: number) => Promise<Nominee[]>;
+  addPatientNominee: (patientId: number, nominee: any) => Promise<void>;
+  updatePatientNominee: (patientId: number, nomineeId: number, updates: any) => Promise<void>;
+  removePatientNominee: (patientId: number, nomineeId: number) => Promise<void>;
 }
 
 export const UserContext = createContext<UserContextType | undefined>(undefined);

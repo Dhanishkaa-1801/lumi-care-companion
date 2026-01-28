@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import api from '@/lib/api';
-import { Activity, Heart, Footprints, Users, ChevronDown, Check } from 'lucide-react';
+import { Activity, Heart, Footprints, Users, ChevronDown, Check, Settings } from 'lucide-react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, AreaChart, Area } from 'recharts';
 import { motion, AnimatePresence } from 'framer-motion';
+import MedicationModal from './MedicationModal';
 
 interface Patient {
     id: number;
@@ -43,6 +44,9 @@ export default function CaretakerDashboard() {
     const [currentVitals, setCurrentVitals] = useState({ heart_rate: 0, sys: 0, dia: 0, steps: 0 });
     const [loading, setLoading] = useState(true);
     const [showPatientMenu, setShowPatientMenu] = useState(false);
+    const [medsModalOpen, setMedsModalOpen] = useState(false);
+
+    const [medicationData, setMedicationData] = useState<any[]>([]);
 
     // Fetch Patients & Poll for Status
     useEffect(() => {
@@ -67,35 +71,41 @@ export default function CaretakerDashboard() {
         return () => clearInterval(interval);
     }, [selectedPatientId]);
 
-    // Poll Vitals
+    // Poll Vitals & Medications
     useEffect(() => {
         if (!selectedPatientId) return;
 
         // Reset data immediately on switch
         setVitalsData([]);
         setCurrentVitals({ heart_rate: 0, sys: 0, dia: 0, steps: 0 });
+        setMedicationData([]);
 
         let isActive = true;
 
-        const fetchVitals = async () => {
+        const fetchVitalsAndMeds = async () => {
             try {
-                const res = await api.get(`/vitals/${selectedPatientId}?limit=100`);
-                if (!isActive) return; // Prevent setting state if unmounted/switched
+                // Fetch Vitals
+                const vitalsRes = await api.get(`/vitals/${selectedPatientId}?limit=100`);
 
-                const metrics: HealthMetric[] = res.data;
+                // Fetch Medication Logs (Last 7 Days)
+                const end = new Date();
+                const start = new Date();
+                start.setDate(start.getDate() - 6); // Last 7 days including today
+                const startStr = start.toISOString().split('T')[0];
+                const endStr = end.toISOString().split('T')[0];
 
-                // Process metrics into chart-friendly format
-                // We need to group by roughly same timestamp (or just sort and fill)
-                // Since we insert them in batches, they should have same timestamp.
+                const medsRes = await api.get(`/medications/${selectedPatientId}/logs?start_date=${startStr}&end_date=${endStr}`);
 
-                // Group by timestamp string
+                if (!isActive) return;
+
+                // --- Process Vitals ---
+                const metrics: HealthMetric[] = vitalsRes.data;
                 const grouped: Record<string, any> = {};
 
                 metrics.forEach(m => {
-                    // Force UTC parsing
                     const utcString = m.timestamp.endsWith('Z') ? m.timestamp : m.timestamp + 'Z';
                     const localDate = new Date(utcString);
-                    const timeKey = localDate.toLocaleTimeString(); // Converts to local time string
+                    const timeKey = localDate.toLocaleTimeString();
 
                     if (!grouped[timeKey]) {
                         grouped[timeKey] = { timestamp: timeKey };
@@ -103,7 +113,7 @@ export default function CaretakerDashboard() {
 
                     if (m.metric_type === 'heart_rate') {
                         grouped[timeKey].heart_rate = parseFloat(m.value);
-                        grouped[timeKey].raw_ts = localDate.getTime(); // for sorting
+                        grouped[timeKey].raw_ts = localDate.getTime();
                     } else if (m.metric_type === 'blood_pressure') {
                         const [sys, dia] = m.value.split('/');
                         grouped[timeKey].systolic = parseInt(sys);
@@ -116,7 +126,6 @@ export default function CaretakerDashboard() {
                 const sortedData = Object.values(grouped).sort((a: any, b: any) => a.raw_ts - b.raw_ts);
                 setVitalsData(sortedData);
 
-                // Update current stats from latest
                 if (sortedData.length > 0) {
                     const latest = sortedData[sortedData.length - 1];
                     setCurrentVitals({
@@ -126,17 +135,44 @@ export default function CaretakerDashboard() {
                         steps: latest.steps || 0
                     });
                 } else {
-                    // No data? Reset stats
                     setCurrentVitals({ heart_rate: 0, sys: 0, dia: 0, steps: 0 });
                 }
 
+                // --- Process Medications ---
+                // Group by date: { "2024-01-01": { taken: 5, total: 8 } }
+                const logs = medsRes.data;
+                const medStats: Record<string, { date: string, taken: number, total: number }> = {};
+
+                // Initialize last 7 days empty
+                for (let i = 0; i < 7; i++) {
+                    const d = new Date();
+                    d.setDate(d.getDate() - i);
+                    const dStr = d.toISOString().split('T')[0];
+                    // Only Month/Day for display e.g. "Jan 29"
+                    const displayDate = d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+                    medStats[dStr] = { date: displayDate, taken: 0, total: 0 };
+                }
+
+                logs.forEach((log: any) => {
+                    if (medStats[log.date]) {
+                        medStats[log.date].total += 1;
+                        if (log.status === 'Taken') {
+                            medStats[log.date].taken += 1;
+                        }
+                    }
+                });
+
+                // Convert to array and reverse (oldest to newest)
+                const chartData = Object.values(medStats).reverse();
+                setMedicationData(chartData);
+
             } catch (e) {
-                console.error("Failed to fetch vitals", e);
+                console.error("Failed to fetch dashboard data", e);
             }
         };
 
-        fetchVitals(); // Initial fetch
-        const interval = setInterval(fetchVitals, 800); // 0.8s Poll for faster updates
+        fetchVitalsAndMeds();
+        const interval = setInterval(fetchVitalsAndMeds, 3000); // 3s Poll for dashboard
         return () => {
             isActive = false;
             clearInterval(interval);
@@ -152,10 +188,10 @@ export default function CaretakerDashboard() {
         <div className="w-full max-w-4xl mx-auto space-y-6">
 
             {/* Patient Selector */}
-            <div className="relative z-20">
+            <div className="relative z-20 flex items-center gap-2">
                 <button
                     onClick={() => setShowPatientMenu(!showPatientMenu)}
-                    className="flex items-center gap-3 bg-card border border-border px-4 py-3 rounded-xl shadow-sm hover:shadow-md transition-all w-full md:w-auto min-w-[250px] justify-between"
+                    className="flex items-center gap-3 bg-card border border-border px-4 py-3 rounded-xl shadow-sm hover:shadow-md transition-all flex-1 md:flex-none md:min-w-[250px] justify-between"
                 >
                     <div className="flex items-center gap-3">
                         <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
@@ -176,6 +212,17 @@ export default function CaretakerDashboard() {
                     </div>
                     <ChevronDown className={`w-5 h-5 text-muted-foreground transition-transform ${showPatientMenu ? 'rotate-180' : ''}`} />
                 </button>
+
+                {/* Patient Settings Button */}
+                {selectedPatientId && (
+                    <button
+                        onClick={() => setMedsModalOpen(true)}
+                        className="bg-card border border-border p-3 rounded-xl shadow-sm hover:shadow-md hover:bg-accent transition-all h-[66px] w-[66px] flex items-center justify-center"
+                        title="Manage Patient Medications"
+                    >
+                        <Settings className="w-6 h-6 text-foreground" />
+                    </button>
+                )}
 
                 <AnimatePresence>
                     {showPatientMenu && (
@@ -204,6 +251,12 @@ export default function CaretakerDashboard() {
                     )}
                 </AnimatePresence>
             </div>
+
+            <MedicationModal
+                open={medsModalOpen}
+                onClose={() => setMedsModalOpen(false)}
+                patientId={selectedPatientId}
+            />
 
             {/* Vitals Grid */}
             <div className="grid gap-6 md:grid-cols-2">
@@ -286,6 +339,34 @@ export default function CaretakerDashboard() {
                         </ResponsiveContainer>
                     </div>
                 </div>
+
+                {/* Medication Adherence Chart */}
+                <div className="care-card p-4 space-y-4 md:col-span-2">
+                    <div className="flex items-center gap-2 mb-2">
+                        <div className="w-8 h-8 rounded-lg bg-green-500/10 flex items-center justify-center">
+                            <Check className="w-5 h-5 text-green-500" />
+                        </div>
+                        <h3 className="font-semibold">Medication Adherence (Last 7 Days)</h3>
+                    </div>
+                    <div className="h-[200px] w-full">
+                        <ResponsiveContainer width="100%" height="100%">
+                            <AreaChart data={medicationData}>
+                                <defs>
+                                    <linearGradient id="colorMeds" x1="0" y1="0" x2="0" y2="1">
+                                        <stop offset="5%" stopColor="#22c55e" stopOpacity={0.8} />
+                                        <stop offset="95%" stopColor="#22c55e" stopOpacity={0} />
+                                    </linearGradient>
+                                </defs>
+                                <CartesianGrid strokeDasharray="3 3" opacity={0.3} />
+                                <XAxis dataKey="date" />
+                                <YAxis allowDecimals={false} width={30} />
+                                <Tooltip />
+                                <Area type="monotone" dataKey="taken" name="Doses Taken" stroke="#22c55e" fillOpacity={1} fill="url(#colorMeds)" />
+                            </AreaChart>
+                        </ResponsiveContainer>
+                    </div>
+                </div>
+
             </div>
         </div>
     );

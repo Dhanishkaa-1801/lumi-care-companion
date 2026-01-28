@@ -77,9 +77,20 @@ export function UserProvider({ children }: { children: ReactNode }) {
                 role: user.role || "patient"
             }));
 
-            // Also fetch medications
-            const medsRes = await api.get('/medications');
-            setMedications(medsRes.data);
+            // Also fetch medications and today's logs
+            const today = new Date().toISOString().split('T')[0];
+            const [medsRes, logsRes] = await Promise.all([
+                api.get('/medications'),
+                api.get(`/medications/logs?start_date=${today}&end_date=${today}`)
+            ]);
+
+            const logs = logsRes.data;
+            const medsWithStatus = medsRes.data.map((med: any) => { // Use any to allow joining
+                const log = logs.find((l: any) => l.medication_id === med.id);
+                return { ...med, taken: log ? log.status === 'Taken' : false };
+            });
+
+            setMedications(medsWithStatus);
 
             // Fetch nominees
             const nomineesRes = await api.get('/nominees/');
@@ -111,7 +122,8 @@ export function UserProvider({ children }: { children: ReactNode }) {
             const res = await api.post('/medications', {
                 ...medication,
             });
-            setMedications((prev) => [...prev, res.data]);
+            // New meds are not taken by default
+            setMedications((prev) => [...prev, { ...res.data, taken: false }]);
         } catch (error) {
             console.error("Failed to add medication", error);
         }
@@ -176,12 +188,37 @@ export function UserProvider({ children }: { children: ReactNode }) {
         }
     };
 
-    const toggleMedicationTaken = (id: number) => {
+    const toggleMedicationTaken = async (id: number) => {
+        // Find current status
+        const med = medications.find(m => m.id === id);
+        if (!med) return;
+
+        const newStatus = !med.taken;
+
+        // Optimistic update
         setMedications((prev) =>
-            prev.map((med) =>
-                med.id === id ? { ...med, taken: !med.taken } : med
+            prev.map((m) =>
+                m.id === id ? { ...m, taken: newStatus } : m
             )
         );
+
+        try {
+            const today = new Date().toISOString().split('T')[0];
+            await api.post(`/medications/${id}/log`, {
+                medication_id: id,
+                date: today,
+                status: newStatus ? 'Taken' : 'Pending',
+                taken_at: newStatus ? new Date().toISOString() : null
+            });
+        } catch (e) {
+            console.error("Failed to sync medication log", e);
+            // Revert on failure
+            setMedications((prev) =>
+                prev.map((m) =>
+                    m.id === id ? { ...m, taken: !newStatus } : m
+                )
+            );
+        }
     };
 
     const logout = async () => {
@@ -282,7 +319,34 @@ export function UserProvider({ children }: { children: ReactNode }) {
                 logout,
                 login,
                 register,
-                checkUser
+                checkUser,
+                // Caretaker methods implementation
+                fetchPatientMedications: async (patientId: number) => {
+                    const res = await api.get(`/medications/${patientId}`);
+                    return res.data;
+                },
+                addPatientMedication: async (patientId: number, med: any) => {
+                    await api.post(`/medications/${patientId}`, med);
+                },
+                updatePatientMedication: async (patientId: number, medId: number, updates: any) => {
+                    await api.put(`/medications/${patientId}/${medId}`, updates);
+                },
+                removePatientMedication: async (patientId: number, medId: number) => {
+                    await api.delete(`/medications/${patientId}/${medId}`);
+                },
+                fetchPatientNominees: async (patientId: number) => {
+                    const res = await api.get(`/nominees/${patientId}`);
+                    return res.data;
+                },
+                addPatientNominee: async (patientId: number, nominee: any) => {
+                    await api.post(`/nominees/${patientId}`, nominee);
+                },
+                updatePatientNominee: async (patientId: number, nomineeId: number, updates: any) => {
+                    await api.put(`/nominees/${patientId}/${nomineeId}`, updates);
+                },
+                removePatientNominee: async (patientId: number, nomineeId: number) => {
+                    await api.delete(`/nominees/${patientId}/${nomineeId}`);
+                }
             }}
         >
             {children}

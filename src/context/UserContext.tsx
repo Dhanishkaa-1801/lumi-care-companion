@@ -27,6 +27,7 @@ export interface UserContextType {
   setAuthenticated: (value: boolean) => void;
   updateProfile: (updates: Partial<UserProfile>) => void;
   addMedication: (medication: Omit<Medication, 'id' | 'taken'>) => void;
+  updateMedication: (id: string, updates: Partial<Omit<Medication, 'id'>>) => void;
   removeMedication: (id: string) => void;
   toggleMedicationTaken: (id: string) => void;
   logout: () => void;
@@ -70,6 +71,14 @@ export function UserProvider({ children }: { children: ReactNode }) {
     setMedications((prev) => [...prev, newMed]);
   };
 
+  const updateMedication = (id: string, updates: Partial<Omit<Medication, 'id'>>) => {
+    setMedications((prev) =>
+      prev.map((med) =>
+        med.id === id ? { ...med, ...updates } : med
+      )
+    );
+  };
+
   const removeMedication = (id: string) => {
     setMedications((prev) => prev.filter((med) => med.id !== id));
   };
@@ -102,6 +111,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
         setAuthenticated,
         updateProfile,
         addMedication,
+        updateMedication,
         removeMedication,
         toggleMedicationTaken,
         logout,

@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
-import { useUser } from '@/context/UserContext';
-import { X, Pill, Plus, Trash2, Clock } from 'lucide-react';
+import { useUser, Medication } from '@/context/UserContext';
+import { X, Pill, Plus, Trash2, Clock, Pencil, Check, XCircle } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 interface MedicationModalProps {
@@ -9,10 +9,33 @@ interface MedicationModalProps {
 }
 
 export default function MedicationModal({ open, onClose }: MedicationModalProps) {
-  const { medications, addMedication, removeMedication } = useUser();
+  const { medications, addMedication, updateMedication, removeMedication } = useUser();
   const [newMedName, setNewMedName] = useState('');
   const [newMedTime, setNewMedTime] = useState('');
   const [error, setError] = useState('');
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editName, setEditName] = useState('');
+  const [editTime, setEditTime] = useState('');
+
+  const formatTimeForDisplay = (time24: string) => {
+    const [hours, minutes] = time24.split(':');
+    const hour = parseInt(hours);
+    const ampm = hour >= 12 ? 'PM' : 'AM';
+    const displayHour = hour % 12 || 12;
+    return `${displayHour.toString().padStart(2, '0')}:${minutes} ${ampm}`;
+  };
+
+  const parseTimeFor24 = (displayTime: string) => {
+    // Convert "08:00 AM" to "08:00"
+    const match = displayTime.match(/(\d{1,2}):(\d{2})\s*(AM|PM)/i);
+    if (!match) return '';
+    let hour = parseInt(match[1]);
+    const minutes = match[2];
+    const ampm = match[3].toUpperCase();
+    if (ampm === 'PM' && hour !== 12) hour += 12;
+    if (ampm === 'AM' && hour === 12) hour = 0;
+    return `${hour.toString().padStart(2, '0')}:${minutes}`;
+  };
 
   const handleAdd = () => {
     if (!newMedName.trim()) {
@@ -24,17 +47,33 @@ export default function MedicationModal({ open, onClose }: MedicationModalProps)
       return;
     }
     
-    // Format time for display
-    const [hours, minutes] = newMedTime.split(':');
-    const hour = parseInt(hours);
-    const ampm = hour >= 12 ? 'PM' : 'AM';
-    const displayHour = hour % 12 || 12;
-    const displayTime = `${displayHour.toString().padStart(2, '0')}:${minutes} ${ampm}`;
-    
+    const displayTime = formatTimeForDisplay(newMedTime);
     addMedication({ name: newMedName.trim(), time: displayTime });
     setNewMedName('');
     setNewMedTime('');
     setError('');
+  };
+
+  const startEditing = (med: Medication) => {
+    setEditingId(med.id);
+    setEditName(med.name);
+    setEditTime(parseTimeFor24(med.time));
+  };
+
+  const cancelEditing = () => {
+    setEditingId(null);
+    setEditName('');
+    setEditTime('');
+  };
+
+  const saveEdit = () => {
+    if (!editingId) return;
+    if (!editName.trim()) return;
+    if (!editTime) return;
+
+    const displayTime = formatTimeForDisplay(editTime);
+    updateMedication(editingId, { name: editName.trim(), time: displayTime });
+    cancelEditing();
   };
 
   return (
@@ -125,21 +164,73 @@ export default function MedicationModal({ open, onClose }: MedicationModalProps)
                         initial={{ opacity: 0, x: -20 }}
                         animate={{ opacity: 1, x: 0 }}
                         exit={{ opacity: 0, x: 20 }}
-                        className="flex items-center justify-between p-3 bg-muted/50 rounded-xl"
+                        className="p-3 bg-muted/50 rounded-xl"
                       >
-                        <div>
-                          <p className="font-medium text-foreground">{med.name}</p>
-                          <p className="text-sm text-muted-foreground flex items-center gap-1">
-                            <Clock className="w-3 h-3" />
-                            {med.time}
-                          </p>
-                        </div>
-                        <button
-                          onClick={() => removeMedication(med.id)}
-                          className="p-2 hover:bg-destructive/10 rounded-lg transition-colors text-destructive"
-                        >
-                          <Trash2 className="w-5 h-5" />
-                        </button>
+                        {editingId === med.id ? (
+                          /* Edit Mode */
+                          <div className="space-y-2">
+                            <input
+                              type="text"
+                              value={editName}
+                              onChange={(e) => setEditName(e.target.value)}
+                              placeholder="Medication name"
+                              className="care-input text-sm"
+                              autoFocus
+                            />
+                            <div className="flex items-center gap-2">
+                              <Clock className="w-4 h-4 text-muted-foreground flex-shrink-0" />
+                              <input
+                                type="time"
+                                value={editTime}
+                                onChange={(e) => setEditTime(e.target.value)}
+                                className="care-input flex-1 text-sm"
+                              />
+                            </div>
+                            <div className="flex gap-2">
+                              <button
+                                onClick={saveEdit}
+                                className="flex-1 btn-primary py-2 text-sm flex items-center justify-center gap-1"
+                              >
+                                <Check className="w-4 h-4" />
+                                Save
+                              </button>
+                              <button
+                                onClick={cancelEditing}
+                                className="flex-1 btn-secondary py-2 text-sm flex items-center justify-center gap-1"
+                              >
+                                <XCircle className="w-4 h-4" />
+                                Cancel
+                              </button>
+                            </div>
+                          </div>
+                        ) : (
+                          /* Display Mode */
+                          <div className="flex items-center justify-between">
+                            <div>
+                              <p className="font-medium text-foreground">{med.name}</p>
+                              <p className="text-sm text-muted-foreground flex items-center gap-1">
+                                <Clock className="w-3 h-3" />
+                                {med.time}
+                              </p>
+                            </div>
+                            <div className="flex items-center gap-1">
+                              <button
+                                onClick={() => startEditing(med)}
+                                className="p-2 hover:bg-primary/10 rounded-lg transition-colors text-primary"
+                                title="Edit medication"
+                              >
+                                <Pencil className="w-4 h-4" />
+                              </button>
+                              <button
+                                onClick={() => removeMedication(med.id)}
+                                className="p-2 hover:bg-destructive/10 rounded-lg transition-colors text-destructive"
+                                title="Delete medication"
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </button>
+                            </div>
+                          </div>
+                        )}
                       </motion.div>
                     ))}
                   </div>

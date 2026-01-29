@@ -103,18 +103,55 @@ export function UserProvider({ children }: { children: ReactNode }) {
     useEffect(() => {
         if (isAuthenticated) {
             refreshProfile();
+
+            // WebSocket Connection for Caretakers
+            // We use a simple strategy: Connect if authenticated.
+            // In a real app, handle reconnects more robustly.
+            // Dynamic WebSocket URL handling
+            const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+            // Use window.location.hostname to support access from other devices on the network
+            const host = window.location.hostname;
+            const port = '8000'; // Assuming backend is always on 8000 for local dev
+            const wsUrl = `${protocol}//${host}:${port}/emergency/ws/${Date.now()}`;
+
+            console.log("Attempting WS Connection to:", wsUrl);
+
+            const ws = new WebSocket(wsUrl);
+
+            ws.onopen = () => {
+                console.log("🟢 WS Connected");
+            };
+
+            ws.onmessage = (event) => {
+                try {
+                    const msg = JSON.parse(event.data);
+                    if (msg.type === "EMERGENCY_TRIGGER") {
+                        // Dispatch a custom event so components can listen? 
+                        // Or just refresh alerts?
+                        // Let's use window event for simplicity across components for now
+                        window.dispatchEvent(new CustomEvent('emergency-alert', { detail: msg }));
+                    } else if (msg.type === "STATUS_UPDATE") {
+                        window.dispatchEvent(new CustomEvent('status-update', { detail: msg }));
+                    }
+                } catch (e) {
+                    console.error("WS Parse error", e);
+                }
+            };
+
+            ws.onclose = () => console.log("🔴 WS Disconnected");
+
+            return () => {
+                ws.close();
+            };
         }
 
-        const handleSessionExpired = () => {
-            // Show toast and logout
-            // Need to import toast or use simple alert if toast not available in this scope easily
-            // Dispatch logout
+        const handleUnauthorized = () => {
+            // Silently logout and redirect to root (handled by isAuthenticated state change)
             logout();
-            alert("Session Expired: You have logged in on another device.");
         };
 
-        window.addEventListener('session-expired', handleSessionExpired);
-        return () => window.removeEventListener('session-expired', handleSessionExpired);
+        window.addEventListener('unauthorized-access', handleUnauthorized);
+        return () => window.removeEventListener('unauthorized-access', handleUnauthorized);
     }, [isAuthenticated]);
 
     const addMedication = async (medication: Omit<Medication, 'id' | 'taken'>) => {
@@ -346,6 +383,39 @@ export function UserProvider({ children }: { children: ReactNode }) {
                 },
                 removePatientNominee: async (patientId: number, nomineeId: number) => {
                     await api.delete(`/nominees/${patientId}/${nomineeId}`);
+                },
+                // Emergency Methods
+                triggerEmergencyAlert: async () => {
+                    try {
+                        const res = await api.post('/emergency/trigger');
+                        return res.data.alert_id;
+                    } catch (e) { console.error("Trigger failed", e); }
+                },
+                resolveEmergencyAlert: async (alertId: number) => {
+                    await api.post(`/emergency/resolve/${alertId}`);
+                },
+                updatePatientStatus: async (status: string) => {
+                    try {
+                        await api.post('/emergency/status', { status });
+                    } catch (e) { console.error("Update status failed", e); }
+                },
+                fetchActiveAlerts: async () => {
+                    try {
+                        const res = await api.get('/emergency/active', {
+                            timeout: 10000 // 10 second timeout
+                        });
+                        console.log(`✅ Fetched ${res.data.length} active alerts`);
+                        return res.data;
+                    } catch (e: any) {
+                        if (e.code === 'ECONNABORTED') {
+                            console.error("❌ Fetch alerts timeout");
+                        } else if (e.response) {
+                            console.error(`❌ Fetch alerts failed: ${e.response.status} ${e.response.statusText}`);
+                        } else {
+                            console.error("❌ Fetch alerts failed:", e.message);
+                        }
+                        return [];
+                    }
                 }
             }}
         >

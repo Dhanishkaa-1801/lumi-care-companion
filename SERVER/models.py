@@ -26,6 +26,7 @@ class User(Base):
     medication_logs = sqlalchemy_relationship("MedicationLog", back_populates="user")
     emergency_alerts = sqlalchemy_relationship("EmergencyAlert", back_populates="user")
     health_metrics = sqlalchemy_relationship("HealthMetric", back_populates="user")
+    patient_status = sqlalchemy_relationship("PatientStatus", uselist=False, back_populates="user")
 
 class Nominee(Base):
     __tablename__ = "nominees"
@@ -88,3 +89,14 @@ class HealthMetric(Base):
     timestamp = Column(DateTime, default=datetime.datetime.utcnow)
     
     user = sqlalchemy_relationship("User", back_populates="health_metrics")
+
+class PatientStatus(Base):
+    __tablename__ = "patient_statuses"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), unique=True) # One status per user
+    phone = Column(String, index=True) # redundant but requested "phone number, status"
+    status = Column(String, default="normal") # normal, warning, alert, emergency
+    last_updated = Column(DateTime, default=datetime.datetime.utcnow)
+
+    user = sqlalchemy_relationship("User", back_populates="patient_status")

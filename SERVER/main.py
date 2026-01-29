@@ -3,7 +3,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from config import settings
 from database import engine, Base
-from routers import auth, users, nominees, medications, emergency, vitals
+from routers import auth, users, medications, nominees, vitals, emergency
 
 # Create tables
 Base.metadata.create_all(bind=engine)
@@ -22,11 +22,12 @@ app.add_middleware(
 )
 
 app.include_router(auth.router)
+app.include_router(auth.router)
 app.include_router(users.router)
-app.include_router(nominees.router)
 app.include_router(medications.router)
-app.include_router(emergency.router)
+app.include_router(nominees.router)
 app.include_router(vitals.router)
+app.include_router(emergency.router)
 
 @app.get("/")
 def read_root():

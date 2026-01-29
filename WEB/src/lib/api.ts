@@ -27,10 +27,8 @@ api.interceptors.response.use(
   (response) => response,
   (error) => {
     if (error.response && error.response.status === 401) {
-      // detail might be "Session expired..."
-      if (error.response.data.detail === "Session expired: Logged in on another device") {
-        window.dispatchEvent(new CustomEvent('session-expired'));
-      }
+      // Dispatch a generic unauthorized event for ANY 401 error
+      window.dispatchEvent(new CustomEvent('unauthorized-access'));
     }
     return Promise.reject(error);
   }

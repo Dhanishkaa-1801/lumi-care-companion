@@ -5,9 +5,10 @@ import { Menu, Settings, User, LogOut, Users } from 'lucide-react';
 
 interface HeaderProps {
   onProfileClick: () => void;
+  onSettingsClick?: () => void;
 }
 
-export default function Header({ onProfileClick }: HeaderProps) {
+export default function Header({ onProfileClick, onSettingsClick }: HeaderProps) {
   const { setLeftSidebarOpen, setRightSidebarOpen, isEmergencyMode } = useApp();
   const { profile, logout } = useUser();
   const [showDropdown, setShowDropdown] = useState(false);
@@ -34,7 +35,7 @@ export default function Header({ onProfileClick }: HeaderProps) {
         {/* Settings (Patient Only) */}
         {profile.role !== 'caretaker' && (
           <button
-            onClick={() => setRightSidebarOpen(true)}
+            onClick={() => onSettingsClick ? onSettingsClick() : setRightSidebarOpen(true)}
             className={`p-2 rounded-xl transition-colors ${isEmergencyMode ? 'hover:bg-white/20 text-white' : 'hover:bg-accent text-foreground'}`}
           >
             <Settings className="w-6 h-6" />

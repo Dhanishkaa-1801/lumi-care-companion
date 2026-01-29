@@ -5,12 +5,76 @@ import { AlertTriangle, Phone, Camera, X } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 export default function EmergencyAlert() {
-  const { isEmergencyMode, clearEmergency } = useApp();
+  const { isEmergencyMode, clearEmergency, emergencyStartTime } = useApp();
   const { profile } = useUser();
+  const [countdown, setCountdown] = React.useState(300);
 
-  const handleCall = () => {
-    // In a real app, this would trigger a phone call
-    window.open(`tel:${profile.nomineePhone}`, '_blank');
+  const { triggerEmergencyAlert, updatePatientStatus } = useUser();
+  const alertTriggeredRef = React.useRef(false);
+  const [callInitiated, setCallInitiated] = React.useState(false);
+
+  const handleCall = React.useCallback(() => {
+    // Trigger call to Emergency Services (108)
+    setCallInitiated(true);
+    // Explicitly set status to EMERGENCY when call is made
+    updatePatientStatus('emergency');
+    window.location.href = "tel:108";
+  }, [updatePatientStatus]);
+
+  // Trigger backend alert
+  React.useEffect(() => {
+    if (isEmergencyMode && !alertTriggeredRef.current) {
+      // When emergency mode starts (countdown), we set status to ALERT
+      updatePatientStatus('alert');
+      // triggerEmergencyAlert(); // We can still do this for backward compat or just rely on status
+      alertTriggeredRef.current = true;
+    }
+    if (!isEmergencyMode) {
+      if (alertTriggeredRef.current) {
+        // If clearing emergency, set to NORMAL
+        updatePatientStatus('normal');
+      }
+      alertTriggeredRef.current = false;
+      setCallInitiated(false);
+    }
+  }, [isEmergencyMode, updatePatientStatus]);
+
+  // Timer logic
+  React.useEffect(() => {
+    if (!isEmergencyMode || !emergencyStartTime || callInitiated) {
+      if (callInitiated) setCountdown(0);
+      return;
+    }
+
+    // Calculate initial remaining time
+    const calculateRemaining = () => {
+      const elapsed = Math.floor((Date.now() - emergencyStartTime) / 1000);
+      const remaining = 300 - elapsed;
+      return remaining > 0 ? remaining : 0;
+    };
+
+    // Set initial immediately
+    setCountdown(calculateRemaining());
+
+    const timer = setInterval(() => {
+      setCountdown((prev) => {
+        const remaining = calculateRemaining();
+        if (remaining <= 0) {
+          clearInterval(timer);
+          if (prev > 0) handleCall();
+          return 0;
+        }
+        return remaining;
+      });
+    }, 1000);
+
+    return () => clearInterval(timer);
+  }, [isEmergencyMode, emergencyStartTime, handleCall, callInitiated]);
+
+  const formatTime = (seconds: number) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins}:${secs.toString().padStart(2, '0')}`;
   };
 
   return (
@@ -32,43 +96,52 @@ export default function EmergencyAlert() {
                 >
                   <AlertTriangle className="w-6 h-6 text-white" />
                 </motion.div>
-                <span className="font-bold text-white text-lg">EMERGENCY ALERT</span>
+                <div className="flex flex-col">
+                  <span className="font-bold text-white text-lg leading-none">EMERGENCY</span>
+                  <span className="text-white/80 text-xs">
+                    {callInitiated ? "Call Initiated" : `Calling in ${formatTime(countdown)}`}
+                  </span>
+                </div>
               </div>
-              <button
-                onClick={clearEmergency}
-                className="p-1.5 hover:bg-white/20 rounded-lg transition-colors"
-              >
-                <X className="w-5 h-5 text-white" />
-              </button>
+              {/* Header Close removed as we have a main cancel button now, or keep both for safety? Keeping main cancel as requested. */}
             </div>
 
             {/* Alert Content */}
             <div className="p-4">
-              <p className="text-white/90 text-center mb-4">
+              <p className="text-white/90 text-center mb-6 text-lg">
                 <span className="font-bold">{profile.name || 'User'}</span> needs help!
               </p>
 
               {/* Action Buttons */}
-              <div className="flex gap-3">
+              <div className="flex gap-4 items-center">
                 <button
                   onClick={handleCall}
-                  className="flex-1 bg-white text-destructive font-semibold py-3 px-4 rounded-xl flex items-center justify-center gap-2 hover:bg-white/90 transition-colors"
+                  className="flex-1 bg-white text-destructive font-bold py-4 px-4 rounded-xl flex flex-col items-center justify-center gap-1 hover:bg-white/90 transition-colors shadow-lg"
                 >
-                  <Phone className="w-5 h-5" />
-                  Call {profile.nomineeName || 'Nominee'}
+                  <div className="flex items-center gap-2 text-lg">
+                    <Phone className="w-6 h-6 fill-current" />
+                    <span>{callInitiated ? "Calling..." : "Call Now"}</span>
+                  </div>
+                  <span className="text-xs opacity-70 font-normal">
+                    {callInitiated ? " connecting..." : `Auto-calling in ${countdown}s`}
+                  </span>
                 </button>
-                <button className="bg-white/20 text-white font-semibold py-3 px-4 rounded-xl flex items-center justify-center gap-2 hover:bg-white/30 transition-colors">
-                  <Camera className="w-5 h-5" />
-                  Camera
+
+                <button
+                  onClick={clearEmergency}
+                  className="bg-black/20 hover:bg-black/30 text-white p-4 rounded-xl flex items-center justify-center transition-colors shadow-lg backdrop-blur-sm"
+                  title="Cancel Emergency"
+                >
+                  <X className="w-8 h-8" />
                 </button>
               </div>
             </div>
 
             {/* Pulsing Bottom Bar */}
             <motion.div
-              className="h-1 bg-white/50"
-              animate={{ opacity: [0.5, 1, 0.5] }}
-              transition={{ duration: 1, repeat: Infinity }}
+              className="h-1.5 bg-white/50"
+              animate={{ width: ["100%", "0%"] }}
+              transition={{ duration: 300, ease: "linear" }}
             />
           </div>
         </motion.div>

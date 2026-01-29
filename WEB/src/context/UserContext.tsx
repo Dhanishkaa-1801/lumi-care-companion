@@ -60,6 +60,11 @@ export interface UserContextType {
   addPatientNominee: (patientId: number, nominee: any) => Promise<void>;
   updatePatientNominee: (patientId: number, nomineeId: number, updates: any) => Promise<void>;
   removePatientNominee: (patientId: number, nomineeId: number) => Promise<void>;
+
+  triggerEmergencyAlert: () => Promise<number | void>;
+  resolveEmergencyAlert: (alertId: number) => Promise<void>;
+  updatePatientStatus: (status: string) => Promise<void>;
+  fetchActiveAlerts: () => Promise<any[]>;
 }
 
 export const UserContext = createContext<UserContextType | undefined>(undefined);

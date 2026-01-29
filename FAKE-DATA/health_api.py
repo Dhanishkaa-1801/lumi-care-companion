@@ -41,12 +41,26 @@ def get_timestamp():
 
 @app.get("/heart-beat")
 def get_heart_beat():
-    """Returns a random heart rate between 60 and 100 bpm."""
-    # Simulate some realistic variance
-    bpm = random.randint(60, 100)
-    # Occasionally spike it up a bit or drop it down for realism
+    """Returns a realistic heart rate that mimics human physiology."""
+    # Base resting heart rate for a healthy adult
+    base_hr = 72
+    
+    # Natural variation throughout the day (±8 bpm)
+    time_variation = random.uniform(-8, 8)
+    
+    # Small random fluctuation for realism (±5 bpm)
+    natural_variation = random.uniform(-5, 5)
+    
+    # Occasional activity spike (10% chance of elevated heart rate)
+    activity_spike = 0
     if random.random() > 0.9:
-        bpm = random.randint(100, 120)
+        activity_spike = random.uniform(15, 35)  # Light to moderate activity
+    
+    # Calculate final heart rate
+    bpm = int(base_hr + time_variation + natural_variation + activity_spike)
+    
+    # Ensure it stays within realistic human range (50-140 bpm)
+    bpm = max(50, min(140, bpm))
     
     return {
         "heart_rate": bpm,
@@ -56,10 +70,34 @@ def get_heart_beat():
 
 @app.get("/blood-pressure")
 def get_blood_pressure():
-    """Returns a random blood pressure (Systolic/Diastolic)."""
-    # Normalish range: Systolic 110-130, Diastolic 70-85
-    systolic = random.randint(110, 135)
-    diastolic = random.randint(70, 85)
+    """Returns realistic blood pressure that mimics human physiology."""
+    # Base normal blood pressure for a healthy adult
+    base_systolic = 120
+    base_diastolic = 80
+    
+    # Natural daily variation
+    systolic_variation = random.uniform(-10, 10)
+    
+    # Diastolic is correlated with systolic (not independent)
+    # Typically diastolic is about 60-70% of systolic
+    # Add some variation but maintain correlation
+    diastolic_ratio = random.uniform(0.60, 0.70)
+    
+    # Calculate systolic
+    systolic = int(base_systolic + systolic_variation)
+    
+    # Calculate diastolic based on systolic with some independent variation
+    diastolic = int(systolic * diastolic_ratio + random.uniform(-5, 5))
+    
+    # Ensure realistic ranges
+    # Normal: 90-120 systolic, 60-80 diastolic
+    # Slightly elevated: up to 130/85
+    systolic = max(95, min(135, systolic))
+    diastolic = max(60, min(90, diastolic))
+    
+    # Ensure diastolic is always less than systolic
+    if diastolic >= systolic:
+        diastolic = systolic - random.randint(30, 40)
     
     return {
         "systolic": systolic,

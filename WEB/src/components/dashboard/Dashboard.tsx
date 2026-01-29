@@ -11,6 +11,7 @@ import MedicationModal from './MedicationModal';
 import EmergencySettingsModal from './EmergencySettingsModal';
 import VitalsModal from './VitalsModal';
 import VitalsBackgroundSync from './VitalsBackgroundSync';
+import CaretakerEmergencyMonitor from './CaretakerEmergencyMonitor';
 
 export default function Dashboard() {
   const { isEmergencyMode } = useApp();
@@ -29,7 +30,10 @@ export default function Dashboard() {
 
   return (
     <div className={`min-h-screen bg-background flex flex-col relative overflow-hidden ${isEmergencyMode ? 'emergency-mode' : ''}`}>
-      <Header onProfileClick={() => setShowProfileModal(true)} />
+      <Header
+        onProfileClick={() => setShowProfileModal(true)}
+        onSettingsClick={() => setShowMedicationModal(true)}
+      />
       <VitalsBackgroundSync />
 
       <main className="flex-1 flex flex-col items-center justify-center px-6 py-8">
@@ -55,9 +59,12 @@ export default function Dashboard() {
         </>
       )}
 
-      {/* Caretaker Only: Profile Modal is still needed if clicked from Header */}
+      {/* Caretaker Only: Profile Modal and Emergency Monitor */}
       {isCaretaker && (
-        <ProfileModal open={showProfileModal} onClose={() => setShowProfileModal(false)} />
+        <>
+          <ProfileModal open={showProfileModal} onClose={() => setShowProfileModal(false)} />
+          <CaretakerEmergencyMonitor />
+        </>
       )}
     </div>
   );

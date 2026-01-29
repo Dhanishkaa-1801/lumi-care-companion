@@ -2,6 +2,7 @@ import React, { createContext, useContext, useState, ReactNode, useCallback } fr
 
 export interface AppContextType {
   isEmergencyMode: boolean;
+  emergencyStartTime: number | null;
   leftSidebarOpen: boolean;
   rightSidebarOpen: boolean;
   isListening: boolean;
@@ -17,7 +18,14 @@ export interface AppContextType {
 const AppContext = createContext<AppContextType | undefined>(undefined);
 
 export function AppProvider({ children }: { children: ReactNode }) {
-  const [isEmergencyMode, setIsEmergencyMode] = useState(false);
+  const [isEmergencyMode, setIsEmergencyMode] = useState(() => {
+    return localStorage.getItem('lumi_emergency_active') === 'true';
+  });
+  const [emergencyStartTime, setEmergencyStartTime] = useState<number | null>(() => {
+    const stored = localStorage.getItem('lumi_emergency_start');
+    return stored ? parseInt(stored) : null;
+  });
+
   const [leftSidebarOpen, setLeftSidebarOpen] = useState(false);
   const [rightSidebarOpen, setRightSidebarOpen] = useState(false);
   const [isListening, setIsListening] = useState(false);
@@ -25,16 +33,24 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   const triggerEmergency = useCallback(() => {
     setIsEmergencyMode(true);
+    const now = Date.now();
+    setEmergencyStartTime(now);
+    localStorage.setItem('lumi_emergency_active', 'true');
+    localStorage.setItem('lumi_emergency_start', now.toString());
   }, []);
 
   const clearEmergency = useCallback(() => {
     setIsEmergencyMode(false);
+    setEmergencyStartTime(null);
+    localStorage.removeItem('lumi_emergency_active');
+    localStorage.removeItem('lumi_emergency_start');
   }, []);
 
   return (
     <AppContext.Provider
       value={{
         isEmergencyMode,
+        emergencyStartTime,
         leftSidebarOpen,
         rightSidebarOpen,
         isListening,

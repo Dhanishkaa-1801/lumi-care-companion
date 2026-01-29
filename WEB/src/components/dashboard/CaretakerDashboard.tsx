@@ -10,6 +10,7 @@ interface Patient {
     fullname: string;
     phone: string;
     last_active_at?: string;
+    status?: string;
 }
 
 interface HealthMetric {
@@ -124,8 +125,12 @@ export default function CaretakerDashboard() {
                 });
 
                 const sortedData = Object.values(grouped).sort((a: any, b: any) => a.raw_ts - b.raw_ts);
-                setVitalsData(sortedData);
+                // Filter for last 2 minutes for the CHART
+                const cutoffTime = Date.now() - 120000;
+                const recentData = sortedData.filter((d: any) => d.raw_ts > cutoffTime);
+                setVitalsData(recentData);
 
+                // Use the LATEST available data for the "Current Value" display (even if older than 30s)
                 if (sortedData.length > 0) {
                     const latest = sortedData[sortedData.length - 1];
                     setCurrentVitals({
@@ -202,10 +207,27 @@ export default function CaretakerDashboard() {
                             <div className="flex items-center gap-2">
                                 <p className="font-semibold text-foreground">{selectedPatient?.fullname || "Select Patient"}</p>
                                 {selectedPatient && (
-                                    <div className={`flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[10px] font-medium ${isOnline(selectedPatient.last_active_at) ? 'bg-green-500/10 text-green-500' : 'bg-gray-500/10 text-gray-500'}`}>
-                                        <div className={`w-1.5 h-1.5 rounded-full ${isOnline(selectedPatient.last_active_at) ? 'bg-green-500 animate-pulse' : 'bg-gray-500'}`} />
-                                        {isOnline(selectedPatient.last_active_at) ? 'Active' : 'Offline'}
-                                    </div>
+                                    <>
+                                        <div className={`flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[10px] font-medium ${isOnline(selectedPatient.last_active_at) ? 'bg-green-500/10 text-green-500' : 'bg-gray-500/10 text-gray-500'}`}>
+                                            <div className={`w-1.5 h-1.5 rounded-full ${isOnline(selectedPatient.last_active_at) ? 'bg-green-500 animate-pulse' : 'bg-gray-500'}`} />
+                                            {isOnline(selectedPatient.last_active_at) ? 'Active' : 'Offline'}
+                                        </div>
+
+                                        {/* Health Status Badge */}
+                                        {selectedPatient.status && selectedPatient.status !== 'normal' && (
+                                            <div className={`flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider
+                                                ${selectedPatient.status === 'emergency' ? 'bg-red-500 text-white animate-pulse' :
+                                                    selectedPatient.status === 'alert' ? 'bg-orange-500 text-white' :
+                                                        selectedPatient.status === 'warning' ? 'bg-yellow-500 text-black' : 'bg-blue-500 text-white'}`}>
+                                                {selectedPatient.status}
+                                            </div>
+                                        )}
+                                        {selectedPatient.status === 'normal' && (
+                                            <div className="flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium bg-blue-500/10 text-blue-500">
+                                                Normal
+                                            </div>
+                                        )}
+                                    </>
                                 )}
                             </div>
                         </div>

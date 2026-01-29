@@ -41,6 +41,11 @@ def get_my_patients(db: Session = Depends(get_db), current_user: models.User = D
     
     # Query: Users joined with Nominees where Nominee.phone == current_user.phone
     patients = db.query(models.User).join(models.Nominee).filter(models.Nominee.phone == current_user.phone).distinct().all()
+    
+    # Enrich with status
+    for p in patients:
+        p.status = p.patient_status.status if p.patient_status else "normal"
+        
     return patients
 
 @router.post("/logout")

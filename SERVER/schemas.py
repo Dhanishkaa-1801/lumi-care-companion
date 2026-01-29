@@ -37,6 +37,7 @@ class User(UserBase):
     id: int
     created_at: datetime
     last_active_at: Optional[datetime] = None
+    status: Optional[str] = "normal"
 
     class Config:
         orm_mode = True
